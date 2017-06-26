@@ -1,0 +1,149 @@
+apiVersion: v1
+kind: Template
+labels:
+  template: wildflyswarm-microservice-template
+message: |-
+  Your Application was successfully created!
+
+  For more information about using this template, including OpenShift considerations, see https://github.com/alteepp TODO!
+metadata:
+  annotations:
+    description: |-
+      WildFly-Swarm Template for Java Microservices. For more information about using this template, including OpenShift considerations, see https://github.com/sclorg/postgresql-container/blob/master/9.5.
+
+      NOTE: Please provide a custom run-script in your repo to succeed startup. See TODO GITHUB URL for more information.
+    openshift.io/display-name: WildFly-Swarm MicroService
+    tags: wildfly-swarm,microservice
+    template.openshift.io/documentation-url: TODO GITHUB URL
+    template.openshift.io/long-description: This template provides a java microservice based on WildFly-Swarm.
+    template.openshift.io/provider-display-name: Sebastian Alteepping
+    template.openshift.io/support-url: TODO GITHUB URL
+  name: wildflyswarm-microservice
+
+objects:
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    name: ${APPLICATION_NAME}
+  spec:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: ${APPLICATION_NAME}:latest
+    runPolicy: Serial
+    source:
+      git:
+        uri: ${REPOSITORY_URI}
+      type: Git
+    strategy:
+      sourceStrategy:
+        from:
+          kind: ImageStreamTag
+          name: ${BASE_IMAGE}:latest
+      type: Source
+    triggers:
+    - type: ConfigChange
+  status: {}
+- apiVersion: v1
+  kind: ImageStream
+    name: ${APPLICATION_NAME}
+  status:
+    dockerImageRepository: ""  
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    creationTimestamp: null
+    name: ${APPLICATION_NAME}
+  spec:
+    replicas: 1
+    selector:
+      run: ${APPLICATION_NAME}
+    strategy:
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          run: ${APPLICATION_NAME}
+      spec:
+        containers:
+          image: ''
+          imagePullPolicy: Always
+          name: ${APPLICATION_NAME}
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers:
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - ${APPLICATION_NAME}
+        from:
+          kind: ImageStreamTag
+          name: ${APPLICATION_NAME}:latest
+        lastTriggeredImage: ""
+      type: ImageChange    
+    - type: ConfigChange
+  status: {}
+- apiVersion: v1
+  kind: Route
+  metadata:
+    name: ${APPLICATION_NAME}
+  spec:
+    host: ${APPLICATION_DOMAIN}
+    path: ${APPLICATION_PATH}
+    port:
+      targetPort: 8080
+    to:
+      kind: Service
+      name: ${APPLICATION_NAME}
+      weight: 100
+    wildcardPolicy: None
+  status: {}
+  
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${APPLICATION_NAME}
+  spec:
+    ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      run: ${APPLICATION_NAME}
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+parameters:
+- description: 'OpenJDK Java Builder Image'
+  displayName: OpenJDK base-image
+  name: ${BASE_IMAGE}
+  required: true
+  value: openjdk18-openshift
+- displayName: Application Name
+  name: ${APPLICATION_NAME}
+  required: true
+- displayName: Application Hostname
+  name: ${APPLICATION_DOMAIN}
+- displayName: Path to REST endpoint
+  name: ${APPLICATION_PATH}
+  value: /
+- displayName: GIT URI
+  name: ${REPOSITORY_URI}
+  required: true
