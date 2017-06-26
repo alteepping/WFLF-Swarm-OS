@@ -1,0 +1,218 @@
+{
+    "kind": "Template",
+    "apiVersion": "v1",
+    "metadata": {
+        "name": "wildflyswarm-microservice",
+        "creationTimestamp": null,
+        "annotations": {
+            "description": "WildFly-Swarm Template for Java Microservices. For more information about using this template, including OpenShift considerations, see https://github.com/alteepping/WFLF-Swarm-OS.\nNOTE: Excute before usage: oc import-image my-redhat-openjdk-18/openjdk18-openshift --from=registry.access.redhat.com/redhat-openjdk-18/openjdk18-openshift --confirm\n\nNOTE: Please provide a custom run-script in your repo to succeed startup. See https://github.com/alteepping/WFLF-Swarm-OS for more information.",
+            "openshift.io/display-name": "WildFly-Swarm MicroService",
+            "tags": "wildfly-swarm,microservice",
+            "template.openshift.io/documentation-url": "https://github.com/alteepping/WFLF-Swarm-OS",
+            "template.openshift.io/long-description": "This template provides a java microservice based on WildFly-Swarm.",
+            "template.openshift.io/provider-display-name": "Sebastian Alteepping",
+            "template.openshift.io/support-url": "https://github.com/alteepping/WFLF-Swarm-OS"
+        }
+    },
+    "message": "Your Application was successfully created!\n\nFor more information about using this template, including OpenShift considerations, see https://github.com/alteepping/WFLF-Swarm-OS",
+    "objects": [
+        {
+            "apiVersion": "v1",
+            "kind": "BuildConfig",
+            "metadata": {
+                "name": "${APPLICATION_NAME}"
+            },
+            "spec": {
+                "output": {
+                    "to": {
+                        "kind": "ImageStreamTag",
+                        "name": "${APPLICATION_NAME}:latest"
+                    }
+                },
+                "runPolicy": "Serial",
+                "source": {
+                    "git": {
+                        "uri": "${REPOSITORY_URI}"
+                    },
+                    "type": "Git"
+                },
+                "strategy": {
+                    "sourceStrategy": {
+                        "from": {
+                            "kind": "ImageStreamTag",
+                            "name": "${BASE_IMAGE}:latest"
+                        }
+                    },
+                    "type": "Source"
+                },
+                "triggers": [
+                    {
+                        "type": "ConfigChange"
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "ImageStream",
+            "metadata": {
+                "annotations": {
+                    "description": "Keeps track of changes in the application image"
+                },
+                "name": "${APPLICATION_NAME}"
+            }
+        },
+        {
+    "kind": "DeploymentConfig",
+    "apiVersion": "v1",
+    "metadata": {
+        "name": "${APPLICATION_NAME}",
+        "generation": 1,
+        "creationTimestamp": null,
+        "labels": {
+            "run": "${APPLICATION_NAME}"
+        }
+    },
+    "spec": {
+        "strategy": {
+            "type": "Rolling",
+            "rollingParams": {
+                "updatePeriodSeconds": 1,
+                "intervalSeconds": 1,
+                "timeoutSeconds": 600,
+                "maxUnavailable": "25%",
+                "maxSurge": "25%"
+            },
+            "resources": {}
+        },
+        "triggers": [
+            {
+                "type": "ConfigChange"
+            },
+	    {
+	    	"type": "ImageChange",
+		"imageChangeParams": {
+			"automatic": true,
+			"containerNames": ["${APPLICATION_NAME}"],
+			"from": {
+				"kind": "ImageStreamTag",
+				"name": "${APPLICATION_NAME}:latest"
+				}
+		}
+	}
+        ],
+        "replicas": 1,
+        "test": false,
+        "selector": {
+            "run": "${APPLICATION_NAME}"
+        },
+        "template": {
+            "metadata": {
+                "creationTimestamp": null,
+                "labels": {
+                    "run": "${APPLICATION_NAME}"
+                }
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "name": "${APPLICATION_NAME}",
+                        "image": "",
+                        "ports": [
+                            {
+                                "containerPort": 8080,
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "resources": {},
+                        "terminationMessagePath": "/dev/termination-log",
+                        "imagePullPolicy": "Always"
+                    }
+                ],
+                "restartPolicy": "Always",
+                "terminationGracePeriodSeconds": 30,
+                "dnsPolicy": "ClusterFirst",
+                "securityContext": {}
+            }
+        }
+    },
+    "status": {}
+},
+        {
+            "apiVersion": "v1",
+            "kind": "Route",
+            "metadata": {
+                "name": "${APPLICATION_NAME}"
+            },
+            "spec": {
+                "host": "${APPLICATION_DOMAIN}",
+                "path": "${APPLICATION_PATH}",
+                "port": {
+                    "targetPort": 8080
+                },
+                "to": {
+                    "kind": "Service",
+                    "name": "${APPLICATION_NAME}",
+                    "weight": 100
+                },
+                "wildcardPolicy": "None"
+            },
+            "status": {}
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "Service",
+            "metadata": {
+                "name": "${APPLICATION_NAME}"
+            },
+            "spec": {
+                "ports": [
+                    {
+                        "port": 8080,
+                        "protocol": "TCP",
+                        "targetPort": 8080
+                    }
+                ],
+                "selector": {
+                    "run": "${APPLICATION_NAME}"
+                },
+                "sessionAffinity": "None",
+                "type": "ClusterIP"
+            },
+            "status": {
+                "loadBalancer": {}
+            }
+        }
+    ],
+    "parameters": [
+        {
+            "name": "BASE_IMAGE",
+            "displayName": "OpenJDK base-image",
+            "description": "OpenJDK Java Builder Image",
+            "value": "openjdk18-openshift",
+            "required": true
+        },
+        {
+            "name": "APPLICATION_NAME",
+            "displayName": "Application Name",
+            "required": true
+        },
+        {
+            "name": "APPLICATION_DOMAIN",
+            "displayName": "Application Hostname"
+        },
+        {
+            "name": "APPLICATION_PATH",
+            "displayName": "Path to REST endpoint",
+            "value": "/"
+        },
+        {
+            "name": "REPOSITORY_URI",
+            "displayName": "GIT URI",
+            "required": true
+        }
+    ],
+    "labels": {
+        "template": "wildflyswarm-microservice-template"
+    }
+}
