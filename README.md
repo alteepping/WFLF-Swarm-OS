@@ -9,9 +9,9 @@ oc create -f https://raw.githubusercontent.com/alteepping/WFLF-Swarm-OS/master/w
 oc new-app --template=wildflyswarm-microservice --param=APPLICATION_NAME=theNameOfTheApplication --param=REPOSITORY_URI=https://theRepositoryOfTheApplicationsSour.ce
 
 
-##Additional parameters
-###APPLICATION_DOMAIN
+## Additional parameters
+### APPLICATION_DOMAIN
 Hostname of the route to application.
 
-###APPLICATION_PATH
+### APPLICATION_PATH
 Prefix of path to main rest-endpoint
